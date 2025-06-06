@@ -7,10 +7,13 @@
 #define MAX_QUESTIONS 15
 #define INFO_FILE "info.txt"
 
+#define RED     "\033[0;31m"
+#define RESET   "\033[0m"
+
 typedef struct {
     char question[256];
     char options[4][128];
-    char correct_option; // e.g., 'A', 'B', 'C', or 'D'
+    char correct_option;
     int fifty_fifty_remove[2]; 
 } Question;
 
@@ -101,17 +104,6 @@ Question questions[15] = {
     }
 };
 
-void loadQuestions(Question questions[]) {
-    for (int i = 0; i < MAX_QUESTIONS; i++) {
-        sprintf(questions[i].question, "Sample Question %d?", i + 1);
-        sprintf(questions[i].options[0], "Option A for Q%d", i + 1);
-        sprintf(questions[i].options[1], "Option B for Q%d", i + 1);
-        sprintf(questions[i].options[2], "Option C for Q%d", i + 1);
-        sprintf(questions[i].options[3], "Option D for Q%d", i + 1);
-        questions[i].correct_option = 'A' + (i % 4); // Rotate correct option
-    }
-}
-
 void saveGameResult(const char* name, float score) {
     FILE *fp = fopen(INFO_FILE, "a");
     if (fp == NULL) {
@@ -129,13 +121,40 @@ void viewLeaderboard() {
         return;
     }
 
-    char name[100];
-    float score;
-    printf("\n--- Leaderboard ---\n");
-    while (fscanf(fp, "%s %f", name, &score) == 2) {
-        printf("%s - %.1f points\n", name, score);
+    typedef struct {
+        char name[100];
+        float score;
+    } Player;
+
+    Player players[1000];
+    int count = 0;
+
+    while (fscanf(fp, "%s %f", players[count].name, &players[count].score) == 2) {
+        count++;
     }
     fclose(fp);
+
+    // Sort top 5 by score descending
+    for (int i = 0; i < count - 1; i++) {
+        for (int j = i + 1; j < count; j++) {
+            if (players[j].score > players[i].score) {
+                Player temp = players[i];
+                players[i] = players[j];
+                players[j] = temp;
+            }
+        }
+    }
+
+    printf("\n--- Top 5 Players ---\n");
+    int top = count < 5 ? count : 5;
+    for (int i = 0; i < top; i++) {
+        printf("%s - " RED "%.1f" RESET " points\n", players[i].name, players[i].score);
+    }
+
+    printf("\n--- Full Leaderboard ---\n");
+    for (int i = 0; i < count; i++) {
+        printf("%s - " RED "%.1f" RESET " points\n", players[i].name, players[i].score);
+    }
 }
 
 void viewUserHistory(const char* username) {
@@ -151,7 +170,7 @@ void viewUserHistory(const char* username) {
     printf("\n--- History for %s ---\n", username);
     while (fscanf(fp, "%s %f", name, &score) == 2) {
         if (strcmp(name, username) == 0) {
-            printf("Score: %.1f points\n", score);
+            printf("Score: " RED "%.1f" RESET " points\n", score);
             found = 1;
         }
     }
@@ -162,7 +181,6 @@ void viewUserHistory(const char* username) {
 }
 
 void playGame() {
-
     float score = 0.0;
     int used_fifty_fifty = 0;
     char input[10];
@@ -219,7 +237,7 @@ void playGame() {
         }
     }
 
-    printf("\nGame over! Your total score: %.1f\n", score);
+    printf("\nGame over! Your total score: " RED "%.1f" RESET "\n", score);
     printf("Enter your name to save your score: ");
     char name[100];
     scanf("%s", name);
@@ -260,5 +278,3 @@ int main() {
     }
     return 0;
 }
-
-
